@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api',
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -11,9 +15,75 @@ export const getCustomers = () => api.get('/customers');
 export const createCustomer = (payload) => api.post('/customers', payload);
 export const bulkUploadCustomers = (formData) =>
   api.post('/customers/bulk-upload', formData, {
+export const getCustomers = async ({ page = 1, size = 10, search = '' } = {}) => {
+  const response = await apiClient.get('/customers', {
+    params: { page, size, search }
+  });
+  return response.data;
+};
+
+export const getCustomerById = async (id) => {
+  const response = await apiClient.get(`/customers/${id}`);
+  return response.data;
+};
+
+export const createCustomer = async (payload) => {
+  const response = await apiClient.post('/customers', payload);
+  return response.data;
+};
+
+export const updateCustomer = async (id, payload) => {
+  const response = await apiClient.put(`/customers/${id}`, payload);
+  return response.data;
+};
+
+export const deleteCustomer = async (id) => {
+  const response = await apiClient.delete(`/customers/${id}`);
+  return response.data;
+};
+
+export const uploadCustomersSheet = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post('/customers/bulk-upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   });
 
 export default api;
+  return response.data;
+};
+
+export const getUploadJobStatus = async (jobId) => {
+  const response = await apiClient.get(`/jobs/${jobId}/status`);
+  return response.data;
+};
+
+export const pollUploadJobStatus = async (
+  jobId,
+  {
+    intervalMs = 2000,
+    timeoutMs = 60000,
+    onUpdate = () => {},
+    isTerminalState = (status) => ['COMPLETED', 'FAILED'].includes(status)
+  } = {}
+) => {
+  const start = Date.now();
+
+  while (Date.now() - start <= timeoutMs) {
+    const data = await getUploadJobStatus(jobId);
+    onUpdate(data);
+
+    if (isTerminalState(data?.status)) {
+      return data;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error('Polling timed out before job reached terminal state.');
+};
+
+export default apiClient;

@@ -1,24 +1,3 @@
-function CustomerList({ customers }) {
-  return (
-    <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold">Customers</h2>
-      {customers.length === 0 ? (
-        <p className="text-gray-500">No customers found.</p>
-      ) : (
-        <ul className="space-y-2">
-          {customers.map((customer) => (
-            <li
-              key={customer.id || `${customer.email}-${customer.phone}`}
-              className="rounded border border-gray-100 bg-gray-50 px-4 py-3"
-            >
-              <p className="font-medium">{customer.name}</p>
-              <p className="text-sm text-gray-600">{customer.email}</p>
-              <p className="text-sm text-gray-600">{customer.phone}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
 import { useEffect, useState } from 'react';
 import { getCustomers } from '../api';
 
@@ -36,11 +15,15 @@ function CustomerList({ onEdit, onCreate, reloadToken }) {
       setError('');
       try {
         const data = await getCustomers({ page, size });
-        const items = data?.items || data?.content || [];
+        // Handle different possible backend response structures
+        const items = data?.items || data?.content || (Array.isArray(data) ? data : []);
         setCustomers(items);
-        setTotalPages(data?.totalPages || Math.max(1, Math.ceil((data?.total || items.length) / size)));
+        
+        const total = data?.total || data?.totalElements || items.length;
+        const calcPages = data?.totalPages || Math.max(1, Math.ceil(total / size));
+        setTotalPages(calcPages);
       } catch (err) {
-        setError('Failed to load customers. Please try again.');
+        setError('Failed to load customers. Please check backend service.');
       } finally {
         setLoading(false);
       }
@@ -64,68 +47,72 @@ function CustomerList({ onEdit, onCreate, reloadToken }) {
       {error && <p className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <div className="overflow-hidden rounded border border-gray-200">
-        <table className="min-w-full table-auto text-left text-sm">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Mobiles</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto text-left text-sm">
+            <thead className="bg-gray-50 text-gray-700">
               <tr>
-                <td className="px-4 py-4 text-gray-500" colSpan={4}>
-                  Loading customers...
-                </td>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Mobiles</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
-            ) : customers.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-gray-500" colSpan={4}>
-                  No customers found.
-                </td>
-              </tr>
-            ) : (
-              customers.map((customer) => (
-                <tr key={customer.id} className="border-t border-gray-100">
-                  <td className="px-4 py-3">{customer.name}</td>
-                  <td className="px-4 py-3">{customer.email}</td>
-                  <td className="px-4 py-3">{(customer.mobiles || []).join(', ')}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => onEdit(customer.id)}
-                      className="rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600"
-                    >
-                      Edit
-                    </button>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td className="px-4 py-4 text-gray-500" colSpan={4}>
+                    Loading customers...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : customers.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-4 text-gray-500" colSpan={4}>
+                    No customers found.
+                  </td>
+                </tr>
+              ) : (
+                customers.map((customer) => (
+                  <tr key={customer.id || customer.email} className="border-t border-gray-100 uppercase-first">
+                    <td className="px-4 py-3 font-medium">{customer.name}</td>
+                    <td className="px-4 py-3">{customer.email}</td>
+                    <td className="px-4 py-3">{(customer.mobiles || []).join(', ')}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => onEdit(customer.id)}
+                        className="rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <button
-          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-          disabled={page === 1}
-          className="rounded border border-gray-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-600">
-          Page {page} of {totalPages}
-        </span>
-        <button
-          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-          disabled={page >= totalPages}
-          className="rounded border border-gray-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            disabled={page === 1}
+            className="rounded border border-gray-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={page >= totalPages}
+            className="rounded border border-gray-300 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

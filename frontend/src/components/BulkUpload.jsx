@@ -1,36 +1,3 @@
-import { useState } from 'react';
-
-function BulkUpload({ onUpload, loading }) {
-  const [file, setFile] = useState(null);
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!file) return;
-    onUpload(file);
-    setFile(null);
-    event.target.reset();
-  };
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
-    >
-      <h2 className="mb-4 text-lg font-semibold">Bulk Upload (Excel)</h2>
-      <input
-        className="w-full rounded border border-gray-300 px-3 py-2"
-        type="file"
-        accept=".xlsx,.xls"
-        onChange={(event) => setFile(event.target.files?.[0] || null)}
-      />
-      <button
-        className="mt-4 rounded bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 disabled:bg-emerald-300"
-        type="submit"
-        disabled={loading || !file}
-      >
-        {loading ? 'Uploading...' : 'Upload File'}
-      </button>
-    </form>
 import { useEffect, useRef, useState } from 'react';
 import { getUploadJobStatus, uploadCustomersSheet } from '../api';
 
@@ -75,9 +42,10 @@ function BulkUpload({ onDone }) {
   }, [jobId]);
 
   const validateFile = (selectedFile) => {
-    if (!selectedFile) return 'Please choose an .xlsx file.';
-    if (!selectedFile.name.toLowerCase().endsWith('.xlsx')) {
-      return 'Only .xlsx files are supported.';
+    if (!selectedFile) return 'Please choose a file.';
+    const name = selectedFile.name.toLowerCase();
+    if (!name.endsWith('.xlsx') && !name.endsWith('.xls')) {
+      return 'Only Excel files (.xlsx, .xls) are supported.';
     }
     return '';
   };
@@ -109,14 +77,14 @@ function BulkUpload({ onDone }) {
   return (
     <div>
       <h2 className="mb-3 text-lg font-semibold text-gray-800">Bulk Upload Customers</h2>
-      <p className="mb-4 text-sm text-gray-600">Upload an Excel file (.xlsx) and monitor processing status.</p>
+      <p className="mb-4 text-sm text-gray-600">Upload an Excel file and monitor processing status.</p>
 
       {error && <p className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.xls"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
           className="block w-full rounded border border-gray-300 p-2 text-sm"
         />

@@ -1,115 +1,63 @@
--- Fresh schema initialization script for MariaDB
--- Safe to run on a new/empty schema.
+CREATE TABLE IF NOT EXISTS master_country (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
 
-SET FOREIGN_KEY_CHECKS = 0;
+CREATE TABLE IF NOT EXISTS master_city (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    country_id BIGINT,
+    CONSTRAINT fk_city_country FOREIGN KEY (country_id) REFERENCES master_country (id)
+);
 
-DROP TABLE IF EXISTS customer_family;
-DROP TABLE IF EXISTS customer_address;
-DROP TABLE IF EXISTS customer_mobile;
-DROP TABLE IF EXISTS customer;
-DROP TABLE IF EXISTS master_city;
-DROP TABLE IF EXISTS master_country;
+CREATE TABLE IF NOT EXISTS customer (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    dob DATE,
+    nic_number VARCHAR(50) UNIQUE
+);
 
-SET FOREIGN_KEY_CHECKS = 1;
+CREATE TABLE IF NOT EXISTS customer_mobile (
+    customer_id BIGINT NOT NULL,
+    mobile_number VARCHAR(50) NOT NULL,
+    CONSTRAINT fk_cust_mobile FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE
+);
 
-CREATE TABLE master_country (
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    PRIMARY KEY (id)
-) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS customer_address (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    line_1 VARCHAR(255),
+    line_2 VARCHAR(255),
+    city_id BIGINT,
+    country_id BIGINT,
+    CONSTRAINT fk_addr_customer FOREIGN KEY (customer_id) REFERENCES customer (id) ON DELETE CASCADE,
+    CONSTRAINT fk_addr_city FOREIGN KEY (city_id) REFERENCES master_city (id),
+    CONSTRAINT fk_addr_country FOREIGN KEY (country_id) REFERENCES master_country (id)
+);
 
-CREATE TABLE master_city (
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    country_id INT NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT fk_master_city_country
-        FOREIGN KEY (country_id) REFERENCES master_country(id)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-CREATE TABLE customer (
-    id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(150) NOT NULL,
-    dob DATE NOT NULL,
-    nic_number VARCHAR(50) NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT uq_customer_nic_number UNIQUE (nic_number)
-) ENGINE=InnoDB;
-
-CREATE TABLE customer_mobile (
-    customer_id INT NOT NULL,
-    mobile_number VARCHAR(20) NOT NULL,
-    PRIMARY KEY (customer_id, mobile_number),
-    CONSTRAINT fk_customer_mobile_customer
-        FOREIGN KEY (customer_id) REFERENCES customer(id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE
-) ENGINE=InnoDB;
-
-CREATE TABLE customer_address (
-    id INT NOT NULL AUTO_INCREMENT,
-    customer_id INT NOT NULL,
-    line_1 VARCHAR(255) NOT NULL,
-    line_2 VARCHAR(255) NULL,
-    city_id INT NOT NULL,
-    country_id INT NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT fk_customer_address_customer
-        FOREIGN KEY (customer_id) REFERENCES customer(id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE,
-    CONSTRAINT fk_customer_address_city
-        FOREIGN KEY (city_id) REFERENCES master_city(id)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT,
-    CONSTRAINT fk_customer_address_country
-        FOREIGN KEY (country_id) REFERENCES master_country(id)
-        ON UPDATE CASCADE
-        ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-CREATE TABLE customer_family (
-    parent_customer_id INT NOT NULL,
-    child_customer_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS customer_family (
+    parent_customer_id BIGINT NOT NULL,
+    child_customer_id BIGINT NOT NULL,
     PRIMARY KEY (parent_customer_id, child_customer_id),
-    CONSTRAINT fk_customer_family_parent
-        FOREIGN KEY (parent_customer_id) REFERENCES customer(id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE,
-    CONSTRAINT fk_customer_family_child
-        FOREIGN KEY (child_customer_id) REFERENCES customer(id)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE,
-    CONSTRAINT chk_customer_family_not_self CHECK (parent_customer_id <> child_customer_id)
-) ENGINE=InnoDB;
+    CONSTRAINT fk_family_parent FOREIGN KEY (parent_customer_id) REFERENCES customer (id) ON DELETE CASCADE,
+    CONSTRAINT fk_family_child FOREIGN KEY (child_customer_id) REFERENCES customer (id) ON DELETE CASCADE
+);
 
--- Indexes for all foreign key columns and customer.nic_number
-CREATE INDEX idx_master_city_country_id ON master_city(country_id);
-CREATE INDEX idx_customer_nic_number ON customer(nic_number);
-CREATE INDEX idx_customer_mobile_customer_id ON customer_mobile(customer_id);
-CREATE INDEX idx_customer_address_customer_id ON customer_address(customer_id);
-CREATE INDEX idx_customer_address_city_id ON customer_address(city_id);
-CREATE INDEX idx_customer_address_country_id ON customer_address(country_id);
-CREATE INDEX idx_customer_family_parent_customer_id ON customer_family(parent_customer_id);
-CREATE INDEX idx_customer_family_child_customer_id ON customer_family(child_customer_id);
+-- Insert dummy data for Country
+INSERT INTO master_country (name) VALUES ('United States') ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_country (name) VALUES ('United Kingdom') ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_country (name) VALUES ('Canada') ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_country (name) VALUES ('Australia') ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_country (name) VALUES ('Germany') ON DUPLICATE KEY UPDATE name=name;
 
-INSERT INTO master_country (id, name) VALUES
-    (1, 'United States'),
-    (2, 'Canada'),
-    (3, 'United Kingdom'),
-    (4, 'Australia'),
-    (5, 'India');
-
-INSERT INTO master_city (id, name, country_id) VALUES
-    (1, 'New York', 1),
-    (2, 'Los Angeles', 1),
-    (3, 'Toronto', 2),
-    (4, 'Vancouver', 2),
-    (5, 'London', 3),
-    (6, 'Manchester', 3),
-    (7, 'Sydney', 4),
-    (8, 'Melbourne', 4),
-    (9, 'Mumbai', 5),
-    (10, 'Bengaluru', 5);
+-- Insert dummy data for City (assuming IDs 1 to 5 correspond to the above countries)
+INSERT INTO master_city (name, country_id) VALUES ('New York', 1) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Los Angeles', 1) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('London', 2) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Manchester', 2) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Toronto', 3) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Vancouver', 3) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Sydney', 4) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Melbourne', 4) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Berlin', 5) ON DUPLICATE KEY UPDATE name=name;
+INSERT INTO master_city (name, country_id) VALUES ('Munich', 5) ON DUPLICATE KEY UPDATE name=name;

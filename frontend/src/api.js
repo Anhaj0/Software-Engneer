@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api',
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
 
 const apiClient = axios.create({
@@ -11,13 +9,10 @@ const apiClient = axios.create({
   }
 });
 
-export const getCustomers = () => api.get('/customers');
-export const createCustomer = (payload) => api.post('/customers', payload);
-export const bulkUploadCustomers = (formData) =>
-  api.post('/customers/bulk-upload', formData, {
 export const getCustomers = async ({ page = 1, size = 10, search = '' } = {}) => {
+  const backendPage = Math.max(0, page - 1);
   const response = await apiClient.get('/customers', {
-    params: { page, size, search }
+    params: { page: backendPage, size, search }
   });
   return response.data;
 };
@@ -51,10 +46,11 @@ export const uploadCustomersSheet = async (file) => {
       'Content-Type': 'multipart/form-data'
     }
   });
-
-export default api;
   return response.data;
 };
+
+// Aliases for compatibility with different versions of components
+export const bulkUploadCustomers = uploadCustomersSheet;
 
 export const getUploadJobStatus = async (jobId) => {
   const response = await apiClient.get(`/jobs/${jobId}/status`);
